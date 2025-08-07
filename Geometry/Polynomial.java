@@ -1,12 +1,13 @@
-package Math;
+package Geometry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Polynomial {
-    public final double[] coeffs; // coeffs[i] = coefficient for t^i
-
+/**
+ * @param coeffs coeffs[i] = coefficient for t^i
+ */
+public record Polynomial(double[] coeffs) {
     public Polynomial(double[] coeffs) {
         this.coeffs = Arrays.copyOf(coeffs, coeffs.length);
     }

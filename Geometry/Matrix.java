@@ -1,4 +1,4 @@
-package Math;
+package Geometry;
 
 import java.util.Arrays;
 

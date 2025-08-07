@@ -3,14 +3,10 @@ package PathGeneration;
 import java.util.List;
 import java.util.function.Function;
 
-import Math.BezierCurve;
-import Math.Matrix;
-import Math.Polynomial;
-import Math.Vector;
-import Math.Pose;
+import Geometry.*;
 
 public class Path {
-    public interface HeadingInterpolation extends Function<Double, Math.Matrix.RotationMatrix> { }
+    public interface HeadingInterpolation extends Function<Double, Matrix.RotationMatrix> { }
 
     private BezierCurve curve;
     private HeadingInterpolation headingInterpolation;
