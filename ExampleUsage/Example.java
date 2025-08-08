@@ -15,14 +15,14 @@ public class Example {
                         new Vector(0,1,1),
                         new Vector(1,1,1)
                 )
-                .setHeadingInterpolation(c -> MathFunctions.linearInterpolation(
+                .setHeadingInterpolation(MathFunctions.linearInterpolation(
                     new Matrix.RotationMatrix(3),
                     new Matrix.RotationMatrix(new double[][]{
                             {0.1, 0.2, 0.3},
                             {0.4, 0.5, 0.6},
                             {0.7, 0.8, 0.9}
                     })
-                ).apply(c.t()));
+                ));
         follower.follow(path);
 
         do {

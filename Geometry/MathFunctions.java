@@ -25,13 +25,13 @@ public class MathFunctions {
         return t -> start.add(end.subtract(start).scale(t));
     }
 
-    public static Function<Double, Matrix.RotationMatrix> linearInterpolation(Matrix.RotationMatrix start, Matrix.RotationMatrix end) {
+    public static Path.HeadingInterpolation linearInterpolation(Matrix.RotationMatrix start, Matrix.RotationMatrix end) {
         // Relative rotation from start to end
         Matrix.RotationMatrix R_rel = start.transpose().multiply(end);
 
         // Skew-symmetric log of relative rotation
         Matrix.SkewSymmetricMatrix S = R_rel.log();
 
-        return t -> start.multiply(S.scale(t).exp());
+        return c -> start.multiply(S.scale(c.t()).exp());
     }
 }
