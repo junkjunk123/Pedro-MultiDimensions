@@ -164,6 +164,15 @@ public class Vector {
         return new Vector(result);
     }
 
+    public double distance(Vector other) {
+        return subtract(other).magnitude();
+    }
+
+    public Vector projectOnto(Vector other) {
+        double scalar = dot(other) / other.magnitudeSquared();
+        return other.scale(scalar);
+    }
+
     @Override
     public String toString() {
         return "Math.Vector" + Arrays.toString(components);

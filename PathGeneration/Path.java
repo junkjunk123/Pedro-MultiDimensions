@@ -53,4 +53,12 @@ public class Path {
 
         return bestT;
     }
+
+    public BezierCurve getCurve() {
+        return curve;
+    }
+
+    public HeadingInterpolation getHeadingInterpolation() {
+        return headingInterpolation;
+    }
 }

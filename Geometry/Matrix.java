@@ -164,6 +164,22 @@ public class Matrix {
         return data;
     }
 
+    /**
+     * Multiplies every entry in the matrix by the given scalar.
+     *
+     * @param scalar The scalar to multiply by.
+     * @return A new Matrix representing the scaled result.
+     */
+    public Matrix scale(double scalar) {
+        double[][] result = new double[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result[i][j] = this.data[i][j] * scalar;
+            }
+        }
+        return new Matrix(result);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Math.Matrix[\n");
@@ -199,102 +215,163 @@ public class Matrix {
             this.dimension = matrix.length;
         }
 
-        // Static constructor for 2D rotation
-        public static RotationMatrix from2DAngle(double angleRadians) {
-            double[][] m = {
-                    {Math.cos(angleRadians), -Math.sin(angleRadians)},
-                    {Math.sin(angleRadians),  Math.cos(angleRadians)}
-            };
-            return new RotationMatrix(m);
+        public int getDimension() {
+            return dimension;
         }
 
-        // Static constructor for 3D rotation around x-axis
-        public static RotationMatrix from3DRotationX(double angleRadians) {
-            double[][] m = {
-                    {1, 0, 0},
-                    {0, Math.cos(angleRadians), -Math.sin(angleRadians)},
-                    {0, Math.sin(angleRadians),  Math.cos(angleRadians)}
-            };
-            return new RotationMatrix(m);
-        }
+        public SkewSymmetricMatrix log() {
+            int n = getRows();
+            Matrix I = Matrix.identity(n);
+            Matrix X = this.subtract(I);  // (R - I)
+            Matrix term = X.copy();
+            Matrix result = X.copy();
 
-        // Static constructor for 3D rotation around y-axis
-        public static RotationMatrix from3DRotationY(double angleRadians) {
-            double[][] m = {
-                    { Math.cos(angleRadians), 0, Math.sin(angleRadians)},
-                    {0, 1, 0},
-                    {-Math.sin(angleRadians), 0, Math.cos(angleRadians)}
-            };
-            return new RotationMatrix(m);
-        }
+            for (int k = 2; k < 50; k++) {
+                term = term.multiply(X);
+                Matrix increment = term.scale((k % 2 == 0 ? -1.0 : 1.0) / k);
+                result = result.add(increment);
 
-        // Static constructor for 3D rotation around z-axis
-        public static RotationMatrix from3DRotationZ(double angleRadians) {
-            double[][] m = {
-                    {Math.cos(angleRadians), -Math.sin(angleRadians), 0},
-                    {Math.sin(angleRadians),  Math.cos(angleRadians), 0},
-                    {0, 0, 1}
-            };
-            return new RotationMatrix(m);
-        }
-
-        // Apply rotation to a vector
-        public Vector apply(Vector v) {
-            if (v.getDimension() != dimension) {
-                throw new IllegalArgumentException("Math.Vector dimension must match rotation matrix.");
+                if (increment.frobeniusNorm() < 1e-10) break;
             }
-            double[] result = new double[dimension];
+
+            return new SkewSymmetricMatrix(result.get());
+        }
+
+        public RotationMatrix multiply(RotationMatrix other) {
+            return (RotationMatrix) super.multiply(other);
+        }
+
+        public RotationMatrix transpose() {
+            return (RotationMatrix) super.transpose();
+        }
+
+        public RotationMatrix scale(double scalar) {
+            return (RotationMatrix) super.scale(scalar);
+        }
+    }
+
+    public static class SkewSymmetricMatrix extends Matrix {
+        private final int dimension;
+
+        /**
+         * Constructs a zero skew-symmetric matrix of given dimension.
+         */
+        public SkewSymmetricMatrix(int dimension) {
+            super(dimension, dimension);
+            this.dimension = dimension;
+        }
+
+        /**
+         * Constructs a skew-symmetric matrix from a 2D array.
+         * Throws if the matrix is not skew-symmetric.
+         */
+        public SkewSymmetricMatrix(double[][] data) {
+            super(data);
+            if (getRows() != getCols()) {
+                throw new IllegalArgumentException("Skew-symmetric matrix must be square.");
+            }
+            this.dimension = getRows();
+
+            // Validate skew-symmetry
             for (int i = 0; i < dimension; i++) {
-                for (int j = 0; j < dimension; j++) {
-                    result[i] += get(i, j) * v.get(j);
+                if (Math.abs(get(i, i)) > 1e-9) {
+                    throw new IllegalArgumentException("Diagonal of skew-symmetric matrix must be zero.");
                 }
-            }
-            return new Vector(result);
-        }
-
-        // Compose this rotation with another (this * other)
-        public RotationMatrix compose(RotationMatrix other) {
-            if (this.dimension != other.dimension) {
-                throw new IllegalArgumentException("Rotation matrices must have the same dimension.");
-            }
-
-            double[][] result = new double[dimension][dimension];
-            for (int i = 0; i < dimension; i++) {
-                for (int j = 0; j < dimension; j++) {
-                    for (int k = 0; k < dimension; k++) {
-                        result[i][j] += get(i, k) * get()[k][j];
+                for (int j = i + 1; j < dimension; j++) {
+                    if (Math.abs(get(i, j) + get(j, i)) > 1e-9) {
+                        throw new IllegalArgumentException("Matrix is not skew-symmetric at (" + i + ", " + j + ").");
                     }
                 }
             }
-
-            return new RotationMatrix(result);
         }
 
-        // Return the transpose (inverse for orthogonal rotation matrix)
-        public RotationMatrix transpose() {
-            double[][] result = new double[dimension][dimension];
-            for (int i = 0; i < dimension; i++) {
-                for (int j = 0; j < dimension; j++) {
-                    result[i][j] = get(j, i);
-                }
-            }
-            return new RotationMatrix(result);
+        /**
+         * Returns the dimension (same as rows and cols)
+         */
+        public int getDimension() {
+            return dimension;
         }
 
+        /**
+         * Sets the off-diagonal (i, j) entry and enforces skew-symmetry.
+         * You must not set diagonal entries to nonzero values.
+         */
         @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder("RotationMatrix[");
-            for (int i = 0; i < dimension; i++) {
-                sb.append("[");
-                for (int j = 0; j < dimension; j++) {
-                    sb.append(String.format("%.4f", get(i, j)));
-                    if (j < dimension - 1) sb.append(", ");
-                }
-                sb.append("]");
-                if (i < dimension - 1) sb.append(", ");
+        public void set(int i, int j, double value) {
+            if (i == j && Math.abs(value) > 1e-9) {
+                throw new IllegalArgumentException("Diagonal entries of a skew-symmetric matrix must be zero.");
             }
-            sb.append("]");
-            return sb.toString();
+            super.set(i, j, value);
+            super.set(j, i, -value);
         }
+
+        /**
+         * Factory method to construct from a Geometry.Matrix (if skew-symmetric).
+         */
+        public static SkewSymmetricMatrix from(Matrix matrix) {
+            return new SkewSymmetricMatrix(matrix.get());
+        }
+
+        public RotationMatrix exp() {
+            int n = getRows();
+            Matrix term = Matrix.identity(n);   // A^0 / 0!
+            Matrix result = Matrix.identity(n); // Start with I
+
+            Matrix A = this;
+            double factorial = 1.0;
+
+            for (int k = 1; k < 20; k++) {
+                term = term.multiply(A);
+                factorial *= k;
+                Matrix increment = term.scale(1.0 / factorial);
+                result = result.add(increment);
+
+                if (increment.frobeniusNorm() < 1e-10) break;
+            }
+
+            return new RotationMatrix(result.get());
+        }
+
+        public SkewSymmetricMatrix transpose() {
+            return (SkewSymmetricMatrix) super.transpose();
+        }
+
+        public SkewSymmetricMatrix scale(double scalar) {
+            return (SkewSymmetricMatrix) super.scale(scalar);
+        }
+    }
+
+    public double frobeniusNorm() {
+        return Math.sqrt(frobeniusInnerProduct(this));
+    }
+
+    public double frobeniusInnerProduct(Matrix other) {
+        return transpose().multiply(other).trace();
+    }
+
+    public double trace() {
+        double sum = 0;
+
+        for (int i = 0; i < rows; i++) {
+            sum += data[i][i];
+        }
+
+        return sum;
+    }
+
+    public Matrix copy() {
+        return new Matrix(this.get());
+    }
+
+    public static Matrix identity(int n) {
+        Matrix I = new Matrix(n, n);
+        for (int i = 0; i < n; i++) {
+            I.set(i, i, 1.0);
+        }
+        return I;
+    }
+
+    public Matrix subtract(Matrix other) {
+        return this.add(other.scale(-1));
     }
 }

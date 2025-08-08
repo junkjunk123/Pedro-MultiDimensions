@@ -1,5 +1,7 @@
 package PathGeneration;
 
+import Geometry.Fields;
+import Geometry.Matrix;
 import Geometry.Pose;
 import Geometry.Vector;
 
@@ -20,4 +22,18 @@ public abstract class GuidingVectorField<T> {
     }
 
     public abstract T evaluate(Pose pose);
+
+    public static GuidingVectorField<Fields.SpecialEuclideanTangentBundle> compose(
+            EuclideanGuidingVectorField a,
+            GuidingVectorField<Matrix.SkewSymmetricMatrix> b,
+            Matrix.RotationMatrix rot
+    )
+    {
+        return new GuidingVectorField<>() {
+            @Override
+            public Fields.SpecialEuclideanTangentBundle evaluate(Pose pose) {
+                return new Fields.SpecialEuclideanTangentBundle(new Fields.Twist(a.evaluate(pose),b.evaluate(pose)), rot);
+            }
+        };
+    }
 }

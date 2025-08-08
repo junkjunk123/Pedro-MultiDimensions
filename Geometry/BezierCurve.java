@@ -2,18 +2,21 @@ package Geometry;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.TreeMap;
 
 public class BezierCurve {
     public Matrix characteristicMatrix;
     public List<Vector> controlPoints;
     private int dimension;
     private int degree;
+    private TreeMap<Double, Double> arcLengthParametrization = new TreeMap<>();
 
     public BezierCurve(Vector... controlPoints) {
         this.controlPoints = Arrays.stream(controlPoints).toList();
         degree = controlPoints.length - 1;
         dimension = controlPoints[0].getDimension();
         characteristicMatrix = buildBasisMatrix().multiply(buildControlPointMatrix());
+        buildArcLengthParametrization();
     }
 
     private Matrix buildBasisMatrix() {
@@ -85,10 +88,10 @@ public class BezierCurve {
     }
 
     public Vector getTangentVector(double t) {
-        return getDerivative(t);
+        return getDerivative(t).normalize();
     }
 
-    public Vector getPrincipalNormalVector(double t) {
+    public Vector getPrincipalNormalVector(double t, boolean normalize) {
         Vector rPrime = getDerivative(t);         // r'(t)
         Vector rDoublePrime = getSecondDerivative(t); // r''(t)
 
@@ -104,7 +107,7 @@ public class BezierCurve {
         Vector Tprime = term1.subtract(term2).divide(speed * speed);
 
         // Return normalized T' as the principal normal vector
-        return Tprime.normalize();
+        return normalize? Tprime.normalize() : Tprime;
     }
 
     public Vector getSecondDerivative(double t) {
@@ -144,5 +147,37 @@ public class BezierCurve {
         }
 
         return result;
+    }
+
+    public void buildArcLengthParametrization() {
+        Vector previousPoint = evaluate(0);
+        Vector currentPoint;
+        double approxLength = 0;
+        for (int i = 1; i <= 1000; i++) {
+            double t = i/1000.0;
+            currentPoint = evaluate(t);
+            approxLength += previousPoint.distance(currentPoint);
+            previousPoint = currentPoint;
+            arcLengthParametrization.put(t, approxLength);
+        }
+    }
+
+    public double length() {
+        return arcLengthParametrization.get(1.0);
+    }
+
+    public double distanceTraveled(double t) {
+        double lowerBound = arcLengthParametrization.lowerKey(t);
+        double upperBound = arcLengthParametrization.higherKey(t);
+
+        double deltaY = arcLengthParametrization.get(upperBound) - arcLengthParametrization.get(lowerBound);
+        double deltaX = upperBound - lowerBound;
+        double slope = deltaY/deltaX;
+
+        return lowerBound + slope * (t - lowerBound);
+    }
+
+    public double distanceRemaining(double t) {
+        return length() - distanceTraveled(t);
     }
 }
