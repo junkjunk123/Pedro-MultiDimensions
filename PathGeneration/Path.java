@@ -6,8 +6,8 @@ import java.util.function.Function;
 import Geometry.*;
 
 public class Path {
-    public interface HeadingInterpolation extends Function<Double, Matrix.RotationMatrix> { }
-
+    public interface HeadingInterpolation extends Function<CurveContext, Matrix.RotationMatrix> { }
+    public record CurveContext(double t, BezierCurve curve) {}
     private BezierCurve curve;
     private HeadingInterpolation headingInterpolation;
 
@@ -16,8 +16,10 @@ public class Path {
         this.headingInterpolation = headingInterpolation;
     }
 
+    public Path() {}
+
     public Pose getPose(double t) {
-        return new Pose(curve.evaluate(t), headingInterpolation.apply(t));
+        return new Pose(curve.evaluate(t), headingInterpolation.apply(new CurveContext(t, curve)));
     }
 
     public double computeClosestTValue(Vector currentPose) {
@@ -60,5 +62,15 @@ public class Path {
 
     public HeadingInterpolation getHeadingInterpolation() {
         return headingInterpolation;
+    }
+
+    public Path setHeadingInterpolation(HeadingInterpolation headingInterpolation) {
+        this.headingInterpolation = headingInterpolation;
+        return this;
+    }
+
+    public Path setCurve(Vector... controlPoints) {
+        this.curve = new BezierCurve(controlPoints);
+        return this;
     }
 }

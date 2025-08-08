@@ -1,10 +1,7 @@
 package PathGeneration;
 
-import Geometry.Fields;
+import Geometry.*;
 import Geometry.Fields.Twist;
-import Geometry.Matrix;
-import Geometry.Pose;
-import Geometry.Vector;
 
 import PathGeneration.GuidingVectorField.EuclideanGuidingVectorField;
 
@@ -18,13 +15,17 @@ public class Follower {
     private double centripetalFeedforwardGain;
     private final Localizer localizer;
     private double maximumAcceleration = 0;
+    private Pose previousPose;
+    private Twist previousVelocity;
+    private Vector previousTranslationalError;
+    private Matrix.SkewSymmetricMatrix previousRotationalError;
 
     public interface Localizer {
         Pose getPose();
         Twist getTwist();
 
         default Vector getVelocity() {
-            return getTwist().vector();
+            return getTwist().positionalVelocity();
         }
     }
 
@@ -53,9 +54,7 @@ public class Follower {
 
     public void follow(Path path) {
         this.path = path;
-        this.driveController.reset();
-        this.translationalController.reset();
-        this.rotationalController.reset();
+        resetControllers();
     }
 
     public void update() {
@@ -73,6 +72,10 @@ public class Follower {
                 rotationalGuidingVectorField(targetPos),
                 currentPos.orientation()
         );
+
+        previousPose = currentPos;
+        previousVelocity = localizer.getTwist();
+
         hardwareAction.accept(result);
     }
 
@@ -82,6 +85,7 @@ public class Follower {
             public Vector evaluate(Pose pose) {
                 Vector current = pose.position();
                 Vector translationalError = target.subtract(current);
+                previousTranslationalError = translationalError.copy();
                 translationalError.normalize();
                 double controlOutput = translationalController.driveToState(current, target);
                 return translationalError.scale(controlOutput);
@@ -128,7 +132,8 @@ public class Follower {
             public Matrix.SkewSymmetricMatrix evaluate(Pose pose) {
                 Matrix.RotationMatrix targetOrientation = targetPos.orientation();
                 Matrix.RotationMatrix currentOrientation = pose.orientation();
-                Matrix.SkewSymmetricMatrix headingError = targetOrientation.multiply(currentOrientation.transpose()).log();
+                Matrix.SkewSymmetricMatrix headingError = MathFunctions.error(currentOrientation, targetOrientation);
+                previousRotationalError = headingError.copy();
                 double controlOutput = rotationalController.driveToState(currentOrientation, targetOrientation);
                 return headingError.scale(controlOutput);
             }
@@ -186,5 +191,32 @@ public class Follower {
             follower.setMaximumAcceleration(maximumAcceleration);
             return follower;
         }
+    }
+
+    public Twist getPreviousVelocity() {
+        return previousVelocity;
+    }
+
+    public Pose getPreviousPose() {
+        return previousPose;
+    }
+
+    public Matrix.SkewSymmetricMatrix getPreviousRotationalError() {
+        return previousRotationalError;
+    }
+
+    public Vector getPreviousTranslationalError() {
+        return previousTranslationalError;
+    }
+
+    public void breakFollowing() {
+        this.path = null;
+        resetControllers();
+    }
+
+    public void resetControllers() {
+        this.driveController.reset();
+        this.translationalController.reset();
+        this.rotationalController.reset();
     }
 }

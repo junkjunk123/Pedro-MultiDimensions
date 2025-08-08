@@ -209,10 +209,14 @@ public class Matrix {
     public static class RotationMatrix extends Matrix{
         private final int dimension;
 
-        // Private constructor
-        private RotationMatrix(double[][] matrix) {
+        public RotationMatrix(double[][] matrix) {
             super(matrix);
             this.dimension = matrix.length;
+        }
+
+        public RotationMatrix(int dimension) {
+            super(dimension, dimension);
+            this.dimension = dimension;
         }
 
         public int getDimension() {
@@ -238,15 +242,23 @@ public class Matrix {
         }
 
         public RotationMatrix multiply(RotationMatrix other) {
-            return (RotationMatrix) super.multiply(other);
+            return fromMatrix(super.multiply(other));
         }
 
         public RotationMatrix transpose() {
-            return (RotationMatrix) super.transpose();
+            return fromMatrix(super.transpose());
         }
 
         public RotationMatrix scale(double scalar) {
-            return (RotationMatrix) super.scale(scalar);
+            return fromMatrix(super.scale(scalar));
+        }
+
+        public RotationMatrix copy() {
+            return new RotationMatrix(this.get());
+        }
+
+        public RotationMatrix fromMatrix(Matrix other) {
+            return new RotationMatrix(other.get());
         }
     }
 
@@ -333,11 +345,19 @@ public class Matrix {
         }
 
         public SkewSymmetricMatrix transpose() {
-            return (SkewSymmetricMatrix) super.transpose();
+            return fromMatrix(super.transpose());
         }
 
         public SkewSymmetricMatrix scale(double scalar) {
-            return (SkewSymmetricMatrix) super.scale(scalar);
+            return fromMatrix(super.scale(scalar));
+        }
+
+        public SkewSymmetricMatrix copy() {
+            return new SkewSymmetricMatrix(this.get());
+        }
+
+        public SkewSymmetricMatrix fromMatrix(Matrix other) {
+            return new SkewSymmetricMatrix(other.get());
         }
     }
 
